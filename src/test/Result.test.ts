@@ -7,7 +7,7 @@ import { success, error } from "../status-class/result";
 //   if (1+1 == 2) {
 //     return new Success({type:1});
 //   }
-//   return new Error('FUCKYOU');
+//   return new Error('error reason');
 // }
 
 // const res = foo();

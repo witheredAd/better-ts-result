@@ -102,13 +102,100 @@ To make type of `args` more precise, we may not use `[any]` to narrow the generi
 
 ```ts
 function foo<T extends [U] | [], U>(...args: T): T[0] {
+	// T[0]: U | undefined
 	// (parameter) args: [U] | []
+	return args[0];  // U | undefined
+}
+foo("str");  // T ==> [string], U ==> unknown
+```
+
+Now there's no `any` in the code any more. However, actually it works in an odd way. On the one hand, `U` remains to be `unknown`; On the other hand, the reason why the return value is compatible to the declaration, is that `args[0]` is considered to be `U | undefined`, which is the same as `T[0]`. But T is changable, and if you substitue `return args[0]` with `return undefined`, you will find the problem:
+
+```ts
+function foo<T extends [U] | [], U>(...args: T): T[0] {
+	// T[0]: U | undefined
+	return undefined;  // no error! undefined extends (U | undefined)
+}
+foo("str");  // TS: string, but runtime result: undefined
+```
+
+So, in short, we need to make the return type an type responsive to `T` (which means it should be a generic type), with the ability to describe the EXACT type of `args[0]`. How?
+
+We want to return the value of `args[0]`, so let's examine the type of `args[0]` (or `T[0]`, for `args` is of type `T`). As we have restricted `T` to be either `[]` or `[U]`, we know that, when `T ==> []` we have `args[0] ==> undefined`, and when `T ==> [some-type]` we have `args[0] ==> some-type`.
+
+Let's redefine `U` to imitate that logic:
+
+```ts
+function foo<
+	T extends [U] | [],
+	U = T extends [infer K] ? K : undefined
+>(...args: T): U {
+	// (parameter) args: [U] | []
+
 	// Error:
 	// Type 'U | undefined' is not assignable to type 'U'.
-	//   Type 'undefined' is not assignable to type 'U'.
+	//   'U' could be instantiated with an arbitrary type which could be unrelated to 'U | undefined'.
 	return args[0];
 }
+foo();  // T ==> [], U ==> undefined
+foo("str");  // T ==> [string], U ==> string
 ```
-WTF it works
 
-I used to think that, `T extends ([U] | []) & U[]` restrictst that T can only be `[]` or `[U]`; then, if T is `[U]`, we know `[U] & U[]` is `[U]` so `[U][0]` is `[U]`; if T is `[]`, `([] & U[])[0]` is `never`. So, we define `U` as `... : undefined`. Then if t is [], U will be undefined. and this makes it complete.
+In this piece of code, the inference of U works as expected. However, the return value becomes incompatible. As the compiler complains, TS thinks `args[0]` has the type of `U | undefined`. Why?
+
+That's because `args` has the type of `[U] | []`. Check the code below:
+
+```ts
+// number | undefined
+type X = ([number] | [])[0]
+// number
+type X1 = [number][0]
+// undefined, and complaints:
+//   Tuple type '[]' of length '0' has no element at index '0'.
+type X2 = [][0]
+```
+
+If we add an covariant calculation on tuples, it will narrow down. So:
+
+```ts
+// never
+type Y2 = ([] & number[])[0]
+// number
+type Y1 = ([number] & number[])[0]
+// number
+type Y = (([number] | []) & number[])[0]
+```
+
+If we do so to our generic type `T`, which is `T extends ([U] | []) & U[]`, we can make `T[0] ==> U` forever.
+
+And most interestingly, in this case, if `T ==> []`, we have `U ==> undefined`, so `T[0] ==> U ==> undefined`; if `T ==> [some-type]`, we have `U ==> some-type`, so `T[0] ==> U ==> some-type`. This means `U` now has the ability to describe the exact type of `args[0]`. Wonderful!
+
+So the final code is:
+
+```ts
+function foo<
+	T extends ([U] | []) & U[],
+	U = T extends [infer K] ? K : undefined
+>(...args: T): U {
+	return args[0];  // U
+}
+foo();  // T ==> [], U ==> undefined
+foo("str");  // T ==> [string], U ==> string
+```
+
+You can try to change `return args[0]` to other values, such as `return undefined`, and that will not compile, showing that the implementation is well protected by the compiler.
+
+The proof above is a comprehensive one, and even a case-by-case one. As long as `T` is `[]` or `[some-type]`, the proof is correct.
+
+### Discussion
+
+The code could also be written as:
+``` ts
+function foo<
+	T extends ([U] | []) & U[],
+	U = T[0]
+>(...args: T): U {
+	return args[0];  // U
+}
+```
+which also works.
