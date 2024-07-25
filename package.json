@@ -1,0 +1,24 @@
+{
+  "name": "better-ts",
+  "version": "1.0.0",
+  "description": "Utils for better practice towards a safer ts",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "tsc"
+  },
+  "files": [
+    "dist",
+    "src"
+  ],
+  "author": "rinzleaf",
+  "license": "ISC",
+  "devDependencies": {
+    "tsx": "^4.16.2",
+    "typescript": "^5.5.4"
+  },
+  "volta": {
+    "node": "20.16.0"
+  }
+}
