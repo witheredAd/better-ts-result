@@ -22,6 +22,46 @@ Requires TypeScript >= 4.4.4, which is because:
 
 Also set `strictNullChecks` to `true` in `tsconfig.json`.
 
+## Usage
+
+```ts
+import { success, error } from "better-ts-result";
+
+// An function that will return success with data, or error
+function foo(flag: boolean) {
+  if (flag) {
+    return success({ greeting: "hello!" });
+  }
+  return error(/* You may pass err msg here, or you can just leave it empty */);
+}
+
+const res = foo(true);
+// TS style
+if (res.success) {
+	// res.data has compile-time type inference
+	res.data.greeting;
+	// res.err is undefined
+} else {
+	// res.err also has compile-time type inference
+	res.err;
+	// res.data is undefined
+}
+// Rust-style
+res.match({
+  isOk(data) { console.log("OK from match"); },
+  isErr(err) { console.log("Err from match"); },
+});
+// One-side expectation
+res.isErr((err) => {
+	// err is what you pass to error(...)
+	//  - if you don't pass anything, err is undefined
+	//  - whatever you pass, err has compile-time type inference
+  console.log("Err:", err);
+});
+// Optional chaining
+// - if no assertion is made, res.data is T | undefined
+res.data?.greeting ?? "";
+```
 
 ## Principle
 
