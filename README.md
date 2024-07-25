@@ -29,34 +29,34 @@ import { success, error } from "better-ts-result";
 
 // An function that will return success with data, or error
 function foo(flag: boolean) {
-  if (flag) {
-    return success({ greeting: "hello!" });
-  }
-  return error(/* You may pass err msg here, or you can just leave it empty */);
+    if (flag) {
+        return success({ greeting: "hello!" });
+    }
+    return error(/* You may pass err msg here, or you can just leave it empty */);
 }
 
 const res = foo(true);
 // TS style
 if (res.success) {
-	// res.data has compile-time type inference
-	res.data.greeting;
-	// res.err is undefined
+    // res.data has compile-time type inference
+    res.data.greeting;
+    // res.err is undefined
 } else {
-	// res.err also has compile-time type inference
-	res.err;
-	// res.data is undefined
+    // res.err also has compile-time type inference
+    res.err;
+    // res.data is undefined
 }
 // Rust-style
 res.match({
-  isOk(data) { console.log("OK from match"); },
-  isErr(err) { console.log("Err from match"); },
+    isOk(data) { console.log("OK from match"); },
+    isErr(err) { console.log("Err from match"); },
 });
 // One-side expectation
 res.isErr((err) => {
-	// err is what you pass to error(...)
-	//  - if you don't pass anything, err is undefined
-	//  - whatever you pass, err has compile-time type inference
-  console.log("Err:", err);
+    // err is what you pass to error(...)
+    //  - if you don't pass anything, err is undefined
+    //  - whatever you pass, err has compile-time type inference
+    console.log("Err:", err);
 });
 // Optional chaining
 // - if no assertion is made, res.data is T | undefined
@@ -79,8 +79,8 @@ An apparent idea is to use generic types. So we may have:
 
 ```ts
 function foo<T>(arg?: T): T {
-	// Error: Type 'T | undefined' is not assignable to type 'T'...
-	return arg;  // typeof args ==> T | undefined
+    // Error: Type 'T | undefined' is not assignable to type 'T'...
+    return arg;  // typeof args ==> T | undefined
 }
 ```
 
@@ -123,8 +123,8 @@ Although we have got the declaration, there's still some tricks in the implement
 
 ```ts
 function foo<T extends [any] | []>(...args: T): T[0] {
-	// (parameter) args: [any] | []
-	return args[0];
+    // (parameter) args: [any] | []
+    return args[0];
 }
 ```
 
@@ -132,8 +132,8 @@ As you can see, `args` falls back to `[any] | []`, and `args[0]` is of type `any
 
 ```ts
 function foo<T extends [any] | []>(...args: T): number {
-	// (parameter) args: [any] | []
-	return args[0];  // Implied type cast (any -> number), no error!
+    // (parameter) args: [any] | []
+    return args[0];  // Implied type cast (any -> number), no error!
 }
 foo("str");  // TS: number, but runtime result: "str"
 ```
@@ -142,9 +142,9 @@ To make type of `args` more precise, we may not use `[any]` to narrow the generi
 
 ```ts
 function foo<T extends [U] | [], U>(...args: T): T[0] {
-	// T[0]: U | undefined
-	// (parameter) args: [U] | []
-	return args[0];  // U | undefined
+    // T[0]: U | undefined
+    // (parameter) args: [U] | []
+    return args[0];  // U | undefined
 }
 foo("str");  // T ==> [string], U ==> unknown
 ```
@@ -153,8 +153,8 @@ Now there's no `any` in the code any more. However, actually it works in an odd 
 
 ```ts
 function foo<T extends [U] | [], U>(...args: T): T[0] {
-	// T[0]: U | undefined
-	return undefined;  // no error! undefined extends (U | undefined)
+    // T[0]: U | undefined
+    return undefined;  // no error! undefined extends (U | undefined)
 }
 foo("str");  // TS: string, but runtime result: undefined
 ```
@@ -167,15 +167,15 @@ Let's redefine `U` to imitate that logic:
 
 ```ts
 function foo<
-	T extends [U] | [],
-	U = T extends [infer K] ? K : undefined
+    T extends [U] | [],
+    U = T extends [infer K] ? K : undefined
 >(...args: T): U {
-	// (parameter) args: [U] | []
+    // (parameter) args: [U] | []
 
-	// Error:
-	// Type 'U | undefined' is not assignable to type 'U'.
-	//   'U' could be instantiated with an arbitrary type which could be unrelated to 'U | undefined'.
-	return args[0];
+    // Error:
+    // Type 'U | undefined' is not assignable to type 'U'.
+    //   'U' could be instantiated with an arbitrary type which could be unrelated to 'U | undefined'.
+    return args[0];
 }
 foo();  // T ==> [], U ==> undefined
 foo("str");  // T ==> [string], U ==> string
@@ -214,10 +214,10 @@ So the final code is:
 
 ```ts
 function foo<
-	T extends ([U] | []) & U[],
-	U = T extends [infer K] ? K : undefined
+    T extends ([U] | []) & U[],
+    U = T extends [infer K] ? K : undefined
 >(...args: T): U {
-	return args[0];  // U
+    return args[0];  // U
 }
 foo();  // T ==> [], U ==> undefined
 foo("str");  // T ==> [string], U ==> string
@@ -232,10 +232,10 @@ The proof above is a comprehensive one, and even a case-by-case one. As long as 
 The code could also be written as:
 ``` ts
 function foo<
-	T extends ([U] | []) & U[],
-	U = T[0]
+    T extends ([U] | []) & U[],
+    U = T[0]
 >(...args: T): U {
-	return args[0];  // U
+    return args[0];  // U
 }
 ```
 which also works.
